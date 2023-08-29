@@ -73,32 +73,6 @@ void drawAxes()
     glEnd();
 }
 
-void drawCheckerboard()
-{
-    int gridSize = 50; // Number of rows/columns
-
-    glBegin(GL_QUADS);
-    for (int i = -gridSize; i < gridSize; i++)
-    {
-        for (int j = -gridSize; j < gridSize; j++)
-        {
-            if ((i + j) % 2 == 0)
-            {
-                glColor3f(1, 1, 1);
-            }
-            else
-            {
-                glColor3f(0, 0, 0);
-            }
-            glVertex3f(i * 10.0f, j * 10.0f, 0.0f);
-            glVertex3f((i + 1) * 10.0f, j * 10.0f, 0.0f);
-            glVertex3f((i + 1) * 10.0f, (j + 1) * 10.0f, 0.0f);
-            glVertex3f(i * 10.0f, (j + 1) * 10.0f, 0.0f);
-        }
-    }
-    glEnd();
-}
-
 void display()
 {
     // glClear(GL_COLOR_BUFFER_BIT);            // Clear the color buffer (background)
@@ -136,111 +110,84 @@ void display()
 
     drawAxes();
 
-    drawCheckerboard();
-
     glutSwapBuffers(); // Render now
 }
 
 void capture()
 {
-    cout << "Capturing Image" << endl;
-    image.setwidth_height(pixel_size, pixel_size);
+    cout<<"Capturing Image"<<endl;
 
-    // initialize bitmap image and set background color to black
-    for (int i = 0; i < pixel_size; i++)
-        for (int j = 0; j < pixel_size; j++)
-            image.set_pixel(i, j, 0, 0, 0);
+    image = bitmap_image(pixel_size, pixel_size);
 
-    // image.save_image("black.bmp");
+	// initialize bitmap image and set background color to black
+	for(int i=0;i<pixel_size;i++)
+		for(int j=0;j<pixel_size;j++)
+			image.set_pixel(i, j, 0, 0, 0);
+	
+	// image.save_image("black.bmp");
 
-    double planeDistance = (windowHeight / 2.0) / tan((M_PI * fov / 2) / (360.0));
+	double planeDistance = (windowHeight / 2.0) / tan((M_PI * fov/2) / (360.0));
 
-    point topLeft = pos + (l * planeDistance) + (u * (windowHeight / 2.0)) - (r * (windowWidth / 2.0));
+	point topLeft = pos + (l * planeDistance) + (u * (windowHeight / 2.0)) - (r * (windowWidth / 2.0));
 
-    double du = windowWidth / (pixel_size * 1.0);
-    double dv = windowHeight / (pixel_size * 1.0);
+	double du = windowWidth / (pixel_size*1.0);
+	double dv = windowHeight / (pixel_size*1.0);
 
-    // Choose middle of the grid cell
-    topLeft = topLeft + (r * du / 2.0) - (u * dv / 2.0);
+	// Choose middle of the grid cell
+	topLeft = topLeft + (r * du / 2.0) - (u * dv / 2.0);
 
-    int nearestObjectIndex = -1, nearestTriangleIndex = -1, nearestSquareIndex = -1, nearestSphereIndex = -1, nearestGridIndex = -1;
-    double t, tMin;
+	int nearestObjectIndex = -1;
+	double t,tMin;
 
-    for (int i = 0; i < pixel_size; i++)
-    {
-        for (int j = 0; j < pixel_size; j++)
-        {
-            // calculate current pixel
-            point pixel = topLeft + (r * du * i) - (u * dv * j);
+	for(int i=0;i<pixel_size;i++)
+	{
+		for(int j=0;j<pixel_size;j++)
+		{
+			// calculate current pixel
+			point pixel = topLeft + (r * du * i) - (u * dv * j);
 
-            // cast ray from eye to pixel
-            Ray ray(pos, pixel - pos);
-            // Color color;
-            point color;
+			// cast ray from EYE to (curPixel-eye) direction ; eye is the position of the camera
+			Ray ray(pos,pixel-pos);
+			point color;
 
-            // cout<<"Ray direction "<<ray.dir<<endl;
+			// cout<<"Ray direction "<<ray.dir<<endl;
 
-            // find nearest object
-            int nearestObjectIndex = -1;
-            double t, tMin;
+			// find nearest object
+			tMin = -1;
+			nearestObjectIndex = -1;
+			for(int k=0;k<(int)objects.size();k++)
+			{
+				t = objects[k]->intersect(ray,color, 0);
+				if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
+					tMin = t , nearestObjectIndex = k;
+			}
 
-            for (int i = 0; i < windowWidth; i++)
-            {
-                for (int j = 0; j < windowHeight; j++)
-                {
-                    // calculate current pixel
-                    point pixel = topLeft + (r * du * i) - (u * dv * j);
+			// if nearest object is found, then shade the pixel
+			if(nearestObjectIndex != -1)
+			{
+				// cout<<"Object "<<nearestObjectIndex<<" intersected"<<endl;
+				// color = objects[nearestObjectIndex]->color;
+				color = point(0,0,0);
+				// cout<<"Before Color "<<color.x<<" "<<color.y<<" "<<color.z<<endl;
+				double t = objects[nearestObjectIndex]->intersect(ray,color, 1);
 
-                    // cast ray from EYE to (curPixel-eye) direction ; eye is the position of the camera
-                    Ray ray(pos, pixel - pos);
-                    point color;
+				if(color.x > 1) color.x = 1;
+				if(color.y > 1) color.y = 1;
+				if(color.z > 1) color.z = 1;
 
-                    // cout<<"Ray direction "<<ray.dir<<endl;
+				if(color.x < 0) color.x = 0;
+				if(color.y < 0) color.y = 0;
+				if(color.z < 0) color.z = 0;
+				
+				// cout<<"After Color "<<color.x<<" "<<color.y<<" "<<color.z<<endl;
+				image.set_pixel(i, j, 255*color.x, 255*color.y, 255*color.z);
+			}
+		}
+	}
 
-                    // find nearest object
-                    tMin = -1;
-                    nearestObjectIndex = -1;
-                    for (int k = 0; k < (int)objects.size(); k++)
-                    {
-                        t = objects[k]->intersect(ray, color, 0);
-                        if (t > 0 && (nearestObjectIndex == -1 || t < tMin))
-                            tMin = t, nearestObjectIndex = k;
-                    }
-
-                    // if nearest object is found, then shade the pixel
-                    if (nearestObjectIndex != -1)
-                    {
-                        // cout<<"Object "<<nearestObjectIndex<<" intersected"<<endl;
-                        // color = objects[nearestObjectIndex]->color;
-                        color = point(0, 0, 0);
-                        // cout<<"Before Color "<<color.r<<" "<<color.g<<" "<<color.b<<endl;
-                        double t = objects[nearestObjectIndex]->intersect(ray, color, 1);
-
-                        if (color.x > 1)
-                            color.x = 1;
-                        if (color.y > 1)
-                            color.y = 1;
-                        if (color.z > 1)
-                            color.z = 1;
-
-                        if (color.x < 0)
-                            color.x = 0;
-                        if (color.y < 0)
-                            color.y = 0;
-                        if (color.z < 0)
-                            color.z = 0;
-
-                        // cout<<"After Color "<<color.r<<" "<<color.g<<" "<<color.b<<endl;
-                        image.set_pixel(i, j, 255 * color.x, 255 * color.y, 255 * color.z);
-                    }
-                }
-            }
-        }
-    }
-
-    image.save_image("Output_1" + to_string(imageCount) + ".bmp");
-    imageCount++;
-    cout << "Saving Image" << endl;
+	image.save_image("Output_"+to_string(imageCount)+".bmp");
+	imageCount++;
+	cout<<"Saving Image"<<endl;
 }
 
 /* Handler for window re-size event. Called back when the window first appears and
@@ -658,6 +605,9 @@ void readFile()
         spot_lights.push_back(sl);
     }
     file.close();
+    Object *floor;
+    floor = new Floor(checkerboard);
+    objects.push_back(floor);
 
     cout << "Total objects: " << objects.size() << endl;
     // for(int i=0; i<objects.size(); i++){
