@@ -27,13 +27,14 @@ struct point u;                // up direction
 
 GLfloat near_plane;
 GLfloat far_plane;
-GLfloat fov, aspect_ratio, recursion_level, checkerboard;
+GLfloat fov, aspect_ratio, checkerboard;
 GLfloat ka, kd, kr;
 int pixel_size, no_objects, normal_light, spot_light;
 int numTiles = 20;
 float windowWidth = 4;
 float windowHeight = 4;
 int imageCount = 1;
+int recursion_level;
 
 float gridCenterX = 0.0f;
 float gridCenterY = 0.0f;
@@ -126,9 +127,10 @@ void capture()
 	
 	// image.save_image("black.bmp");
 
-	double planeDistance = (windowHeight / 2.0) / tan((M_PI * fov/2) / (360.0));
+	windowHeight  = 2*(near_plane * tan((M_PI * fov/2) / 360.0));
+    windowWidth = windowHeight * aspect_ratio;
 
-	point topLeft = pos + (l * planeDistance) + (u * (windowHeight / 2.0)) - (r * (windowWidth / 2.0));
+	point topLeft = pos + (l * near_plane) + (u * (windowHeight / 2.0)) - (r * (windowWidth / 2.0));
 
 	double du = windowWidth / (pixel_size*1.0);
 	double dv = windowHeight / (pixel_size*1.0);
@@ -169,7 +171,7 @@ void capture()
 				// color = objects[nearestObjectIndex]->color;
 				color = point(0,0,0);
 				// cout<<"Before Color "<<color.x<<" "<<color.y<<" "<<color.z<<endl;
-				double t = objects[nearestObjectIndex]->intersect(ray,color, 0);
+				double t = objects[nearestObjectIndex]->intersect(ray,color, recursion_level);
 
 				if(color.x > 1) color.x = 1;
 				if(color.y > 1) color.y = 1;
@@ -378,7 +380,7 @@ void readFile()
     aspect_ratio = coord[3];
 
     getline(file, line);
-    recursion_level = stod(line);
+    recursion_level = stoi(line);
 
     getline(file, line);
     pixel_size = stoi(line);

@@ -132,6 +132,7 @@ class Object;
 extern vector<Light> normal_lights;
 extern vector<SpotLight> spot_lights;
 extern vector<Object *> objects;
+extern int recursion_level;
 
 class Object
 {
@@ -158,8 +159,10 @@ public:
     virtual double intersect(Ray ray, point &col, int level)
     {
         double t = intersect_shapes(ray, col);
+        if (t < 0)
+            return -1;
         if (level == 0)
-            return t > 0 ? t : -1;
+            return t;
 
         point intersection_point = ray.origin + ray.dir * t;
         point color_intersection = getColorAt(intersection_point);
@@ -214,7 +217,88 @@ public:
             col.z += ks * phong * normal_lights[i].color.z;
         }
 
-        return -1.0;
+        for (int i = 0; i < spot_lights.size(); i++)
+        {
+            point position = spot_lights[i].pointLight.pos;
+            point direction = intersection_point - position;
+            direction.normalize();
+
+            double dot = direction * spot_lights[i].dir;
+            double angle = acos(dot / (direction.length() * spot_lights[i].dir.length())) * (180.0 / M_PI);
+
+            if (fabs(angle) < spot_lights[i].cutoffAngle)
+            {
+                Ray spot_lightray(position, direction);
+                Ray normal = getNormal(intersection_point, spot_lightray);
+
+                bool isShadow = false;
+                double dist = (position - intersection_point).length();
+                if (dist < 1e-5)
+                    continue;
+                for (int j = 0; j < objects.size(); j++)
+                {
+                    double t2 = objects[j]->intersect_shapes(spot_lightray, col);
+                    if (t2 > 0 && t2 + 1e-5 < dist)
+                    {
+                        isShadow = true;
+                        break;
+                    }
+                }
+
+                if (isShadow)
+                    continue;
+                point toSource = -spot_lightray.dir;
+                double scaling_factor = exp(-dist * dist * spot_lights[i].pointLight.falloff);
+                lambert += (toSource * normal.dir) * scaling_factor;
+
+                double dotProduct = ray.dir * normal.dir;
+                point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
+                reflection_dir.normalize();
+                Ray reflected_ray(intersection_point, reflection_dir);
+                phong += pow(reflection_dir * toSource, shine) * scaling_factor;
+
+                // col.x += kd * lambert * spot_lights[i].pointLight.color.x;
+                // col.x += ks * phong * spot_lights[i].pointLight.color.x;
+                // col.y += kd * lambert * spot_lights[i].pointLight.color.y;
+                // col.y += ks * phong * spot_lights[i].pointLight.color.y;
+                // col.z += kd * lambert * spot_lights[i].pointLight.color.z;
+                // col.z += ks * phong * spot_lights[i].pointLight.color.z;
+            }
+        }
+
+        if (level < recursion_level)
+        {
+            Ray normal = getNormal(intersection_point, ray);
+            double dotProduct = ray.dir * normal.dir;
+            point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
+            reflection_dir.normalize();
+
+            Ray reflected_ray(intersection_point, reflection_dir);
+            reflected_ray.origin = reflected_ray.origin + reflected_ray.dir * 1e-5;
+
+            point reflected_color;
+            double t = -1;
+            int nearest = -1;
+
+            for (int i = 0; i < objects.size(); i++)
+            {
+                double t2 = objects[i]->intersect(reflected_ray, reflected_color, level + 1);
+                if (t2 > 0 && (t == -1 || t2 < t))
+                {
+                    t = t2;
+                    nearest = i;
+                }
+            }
+
+            if (nearest != -1)
+            {
+                double t = objects[nearest]->intersect(reflected_ray, reflected_color, level + 1);
+                col.x += kr * reflected_color.x;
+                col.y += kr * reflected_color.y;
+                col.z += kr * reflected_color.z;
+            }
+        }
+        return t;
     }
     virtual void print()
     {
