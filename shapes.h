@@ -127,102 +127,11 @@ double determinant(double ara[3][3])
     double v3 = ara[0][2] * (ara[1][0] * ara[2][1] - ara[1][1] * ara[2][0]);
     return v1 - v2 + v3;
 }
+class Object;
 
-struct line {
-    point p1, p2;
-};
- 
-bool onLine(line l1, point p)
-{
-    // Check whether p is on the line or not
-    if (p.x <= max(l1.p1.x, l1.p2.x)
-        && p.x >= min(l1.p1.x, l1.p2.x)
-        && (p.y <= max(l1.p1.y, l1.p2.y)
-            && p.y >= min(l1.p1.y, l1.p2.y)))
-        return true;
- 
-    return false;
-}
- 
-int direction(point a, point b, point c)
-{
-    int val = (b.y - a.y) * (c.x - b.x)
-              - (b.x - a.x) * (c.y - b.y);
- 
-    if (val == 0)
- 
-        // Collinear
-        return 0;
- 
-    else if (val < 0)
- 
-        // Anti-clockwise direction
-        return 2;
- 
-    // Clockwise direction
-    return 1;
-}
- 
-bool isIntersect(line l1, line l2)
-{
-    // Four direction for two lines and points of other line
-    int dir1 = direction(l1.p1, l1.p2, l2.p1);
-    int dir2 = direction(l1.p1, l1.p2, l2.p2);
-    int dir3 = direction(l2.p1, l2.p2, l1.p1);
-    int dir4 = direction(l2.p1, l2.p2, l1.p2);
- 
-    // When intersecting
-    if (dir1 != dir2 && dir3 != dir4)
-        return true;
- 
-    // When p2 of line2 are on the line1
-    if (dir1 == 0 && onLine(l1, l2.p1))
-        return true;
- 
-    // When p1 of line2 are on the line1
-    if (dir2 == 0 && onLine(l1, l2.p2))
-        return true;
- 
-    // When p2 of line1 are on the line2
-    if (dir3 == 0 && onLine(l2, l1.p1))
-        return true;
- 
-    // When p1 of line1 are on the line2
-    if (dir4 == 0 && onLine(l2, l1.p2))
-        return true;
- 
-    return false;
-}
- 
-bool checkInside(point poly[], int n, point p)
-{
- 
-    // When polygon has less than 3 edge, it is not polygon
-    if (n < 3)
-        return false;
- 
-    // Create a point at infinity, y is same as point p
-    line exline = { p, { 9999, p.y, 0 } };
-    int count = 0;
-    int i = 0;
-    do {
- 
-        // Forming a line from two consecutive points of
-        // poly
-        line side = { poly[i], poly[(i + 1) % n] };
-        if (isIntersect(side, exline)) {
- 
-            // If side is intersects exline
-            if (direction(side.p1, p, side.p2) == 0)
-                return onLine(side, p);
-            count++;
-        }
-        i = (i + 1) % n;
-    } while (i != 0);
- 
-    // When count is odd
-    return count & 1;
-}
+extern vector<Light> normal_lights;
+extern vector<SpotLight> spot_lights;
+extern vector<Object *> objects;
 
 class Object
 {
@@ -240,8 +149,73 @@ public:
         shine = kd = ks = ka = kr = 0;
     }
     virtual void draw() = 0;
-    // virtual Ray getNormal(point pt, Ray incidentRay) = 0;
-    virtual double intersect(Ray ray, point &col, int level) = 0;
+    virtual double intersect_shapes(Ray ray, point &col) = 0;
+    virtual point getColorAt(point pt)
+    {
+        return color;
+    }
+    virtual Ray getNormal(point pt, Ray incidentRay) = 0;
+    virtual double intersect(Ray ray, point &col, int level)
+    {
+        double t = intersect_shapes(ray, col);
+        if (level == 0)
+            return t > 0 ? t : -1;
+
+        point intersection_point = ray.origin + ray.dir * t;
+        point color_intersection = getColorAt(intersection_point);
+
+        // Update color with ambience
+        col.x = color_intersection.x * ka;
+        col.y = color_intersection.y * ka;
+        col.z = color_intersection.z * ka;
+
+        double lambert = 0.0, phong = 0.0;
+
+        for (int i = 0; i < normal_lights.size(); i++)
+        {
+            point position = normal_lights[i].pos;
+            point direction = intersection_point - position;
+            direction.normalize();
+
+            Ray normal_lightray(position, direction);
+            Ray normal = getNormal(intersection_point, normal_lightray);
+
+            bool isShadow = false;
+            double dist = (position - intersection_point).length();
+            if (dist < 1e-5)
+                continue;
+            for (int j = 0; j < objects.size(); j++)
+            {
+                double t2 = objects[j]->intersect_shapes(normal_lightray, col);
+                if (t2 > 0 && t2 + 1e-5 < dist)
+                {
+                    isShadow = true;
+                    break;
+                }
+            }
+
+            if (isShadow)
+                continue;
+            point toSource = -normal_lightray.dir;
+            double scaling_factor = exp(-dist * dist * normal_lights[i].falloff);
+            lambert += (toSource * normal.dir) * scaling_factor;
+
+            double dotProduct = ray.dir * normal.dir;
+            point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
+            reflection_dir.normalize();
+            Ray reflected_ray(intersection_point, reflection_dir);
+            phong += pow(reflection_dir * toSource, shine) * scaling_factor;
+
+            col.x += kd * lambert * normal_lights[i].color.x;
+            col.x += ks * phong * normal_lights[i].color.x;
+            col.y += kd * lambert * normal_lights[i].color.y;
+            col.y += ks * phong * normal_lights[i].color.y;
+            col.z += kd * lambert * normal_lights[i].color.z;
+            col.z += ks * phong * normal_lights[i].color.z;
+        }
+
+        return -1.0;
+    }
     virtual void print()
     {
         cout << "Reference Point: " << reference_point << endl;
@@ -313,6 +287,15 @@ struct Floor : public Object
         }
     }
 
+    virtual Ray getNormal(point pt, Ray incidentRay)
+    {
+        point dir(0, 0, 1);
+        double mul = dir * incidentRay.dir;
+        if (mul > 0)
+            dir = -dir;
+        return {pt, dir};
+    }
+
     virtual void draw()
     {
         glBegin(GL_QUADS);
@@ -337,7 +320,7 @@ struct Floor : public Object
         glEnd();
     }
 
-    virtual double intersect(Ray ray, point &col, int level)
+    virtual double intersect_shapes(Ray ray, point &col)
     {
         point normal = point(0, 0, 1);
         double dotP = normal * ray.dir;
@@ -401,7 +384,7 @@ struct triangle : public Object
         glEnd();
     }
 
-    virtual double intersect(Ray ray, point &col, int level)
+    virtual double intersect_shapes(Ray ray, point &col)
     {
         double betaMat[3][3] = {
             {a.x - ray.origin.x, a.x - c.x, ray.dir.x},
@@ -437,16 +420,17 @@ struct triangle : public Object
     }
 };
 
-bool isPointInsideSquare(point pt, point a, point b, point c, point d) {
+bool isPointInsideSquare(point pt, point a, point b, point c, point d)
+{
     double minX = std::min(std::min(a.x, b.x), std::min(c.x, d.x));
     double maxX = std::max(std::max(a.x, b.x), std::max(c.x, d.x));
-    
+
     double minY = std::min(std::min(a.y, b.y), std::min(c.y, d.y));
     double maxY = std::max(std::max(a.y, b.y), std::max(c.y, d.y));
-    
+
     double minZ = std::min(std::min(a.z, b.z), std::min(c.z, d.z));
     double maxZ = std::max(std::max(a.z, b.z), std::max(c.z, d.z));
-    
+
     return (pt.x >= minX && pt.x <= maxX &&
             pt.y >= minY && pt.y <= maxY &&
             pt.z >= minZ && pt.z <= maxZ);
@@ -477,7 +461,18 @@ struct square : public Object
         glEnd();
     }
 
-    virtual double intersect(Ray ray, point &col, int level)
+    virtual Ray getNormal(point pt, Ray incidentRay)
+    {
+        point normal = (b - a) ^ (c - a);
+        normal.normalize();
+
+        double mul = normal * incidentRay.dir;
+        if (mul > 0)
+            normal = -normal;
+        return {pt, normal};
+    }
+
+    virtual double intersect_shapes(Ray ray, point &col)
     {
         // Find the normal of the square plane
         point normal = (b - a) ^ (c - a);
@@ -487,7 +482,7 @@ struct square : public Object
         double denom = normal * (ray.dir);
 
         // Check if the ray and the plane are not parallel
-        if (std::abs(denom) > 1e-6)
+        if (std::fabs(denom) > 1e-6)
         {
             // Calculate the distance from the ray's origin to the plane
             double t = normal * (a - ray.origin) / denom;
@@ -532,7 +527,7 @@ struct sphere : public Object
         return Ray(pt, pt - reference_point);
     }
 
-    virtual double intersect(Ray ray, point &col, int level)
+    virtual double intersect_shapes(Ray ray, point &col)
     {
         point oc = ray.origin - reference_point;
         double a = ray.dir * ray.dir;
@@ -557,4 +552,3 @@ struct sphere : public Object
         }
     }
 };
-

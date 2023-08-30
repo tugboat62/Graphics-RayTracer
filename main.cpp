@@ -169,7 +169,7 @@ void capture()
 				// color = objects[nearestObjectIndex]->color;
 				color = point(0,0,0);
 				// cout<<"Before Color "<<color.x<<" "<<color.y<<" "<<color.z<<endl;
-				double t = objects[nearestObjectIndex]->intersect(ray,color, 1);
+				double t = objects[nearestObjectIndex]->intersect(ray,color, 0);
 
 				if(color.x > 1) color.x = 1;
 				if(color.y > 1) color.y = 1;
