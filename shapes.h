@@ -199,15 +199,16 @@ public:
 
             if (isShadow)
                 continue;
-            point toSource = -normal_lightray.dir;
+            point toSource = normal_lightray.origin - intersection_point;
+            toSource.normalize();
             double scaling_factor = exp(-dist * dist * normal_lights[i].falloff);
-            lambert += (toSource * normal.dir) * scaling_factor;
+            lambert = (toSource * normal.dir) * scaling_factor;
 
-            double dotProduct = ray.dir * normal.dir;
-            point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
+            double dotProduct = normal_lightray.dir * normal.dir;
+            point reflection_dir = normal_lightray.dir - normal.dir * (2.0 * dotProduct);
             reflection_dir.normalize();
             Ray reflected_ray(intersection_point, reflection_dir);
-            phong += pow(reflection_dir * toSource, shine) * scaling_factor;
+            phong = pow(-reflection_dir * ray.dir, shine) * scaling_factor;
 
             col.x += kd * lambert * normal_lights[i].color.x;
             col.x += ks * phong * normal_lights[i].color.x;
@@ -249,20 +250,20 @@ public:
                     continue;
                 point toSource = -spot_lightray.dir;
                 double scaling_factor = exp(-dist * dist * spot_lights[i].pointLight.falloff);
-                lambert += (toSource * normal.dir) * scaling_factor;
+                lambert = (toSource * normal.dir) * scaling_factor;
 
-                double dotProduct = ray.dir * normal.dir;
-                point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
+                double dotProduct = spot_lightray.dir * normal.dir;
+                point reflection_dir = spot_lightray.dir - normal.dir * (2.0 * dotProduct);
                 reflection_dir.normalize();
                 Ray reflected_ray(intersection_point, reflection_dir);
-                phong += pow(reflection_dir * toSource, shine) * scaling_factor;
+                phong = pow(-reflection_dir * ray.dir, shine) * scaling_factor;
 
-                // col.x += kd * lambert * spot_lights[i].pointLight.color.x;
-                // col.x += ks * phong * spot_lights[i].pointLight.color.x;
-                // col.y += kd * lambert * spot_lights[i].pointLight.color.y;
-                // col.y += ks * phong * spot_lights[i].pointLight.color.y;
-                // col.z += kd * lambert * spot_lights[i].pointLight.color.z;
-                // col.z += ks * phong * spot_lights[i].pointLight.color.z;
+                col.x += kd * lambert * spot_lights[i].pointLight.color.x;
+                col.x += ks * phong * spot_lights[i].pointLight.color.x;
+                col.y += kd * lambert * spot_lights[i].pointLight.color.y;
+                col.y += ks * phong * spot_lights[i].pointLight.color.y;
+                col.z += kd * lambert * spot_lights[i].pointLight.color.z;
+                col.z += ks * phong * spot_lights[i].pointLight.color.z;
             }
         }
 
