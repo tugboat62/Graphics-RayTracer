@@ -167,6 +167,7 @@ public:
         point intersection_point = ray.origin + ray.dir * t;
         point color_intersection = getColorAt(intersection_point);
 
+        // cout << "color_intersection: " << color_intersection << endl;
         // Update color with ambience
         col.x = color_intersection.x * ka;
         col.y = color_intersection.y * ka;
@@ -174,6 +175,7 @@ public:
 
         double lambert = 0.0, phong = 0.0;
 
+        // Problem in this section of code. Need to fix it
         for (int i = 0; i < normal_lights.size(); i++)
         {
             point position = normal_lights[i].pos;
@@ -202,75 +204,86 @@ public:
             point toSource = normal_lightray.origin - intersection_point;
             toSource.normalize();
             double scaling_factor = exp(-dist * dist * normal_lights[i].falloff);
-            lambert = (toSource * normal.dir) * scaling_factor;
+            lambert += (max(0.0, toSource * normal.dir)) * scaling_factor;
 
-            double dotProduct = normal_lightray.dir * normal.dir;
-            point reflection_dir = normal_lightray.dir - normal.dir * (2.0 * dotProduct);
+            double dotProduct = max(0.0, ray.dir * normal.dir);
+            point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
             reflection_dir.normalize();
             Ray reflected_ray(intersection_point, reflection_dir);
-            phong = pow(-reflection_dir * ray.dir, shine) * scaling_factor;
+            phong += pow(max(0.0, reflection_dir * toSource), shine) * scaling_factor;
+            // cout << "lambert: " << lambert << endl;
 
             col.x += kd * lambert * normal_lights[i].color.x;
-            col.x += ks * phong * normal_lights[i].color.x;
             col.y += kd * lambert * normal_lights[i].color.y;
-            col.y += ks * phong * normal_lights[i].color.y;
             col.z += kd * lambert * normal_lights[i].color.z;
-            col.z += ks * phong * normal_lights[i].color.z;
-        }
-
-        for (int i = 0; i < spot_lights.size(); i++)
-        {
-            point position = spot_lights[i].pointLight.pos;
-            point direction = intersection_point - position;
-            direction.normalize();
-
-            double dot = direction * spot_lights[i].dir;
-            double angle = acos(dot / (direction.length() * spot_lights[i].dir.length())) * (180.0 / M_PI);
-
-            if (fabs(angle) < spot_lights[i].cutoffAngle)
+            if (ks > 0)
             {
-                Ray spot_lightray(position, direction);
-                Ray normal = getNormal(intersection_point, spot_lightray);
-
-                bool isShadow = false;
-                double dist = (position - intersection_point).length();
-                if (dist < 1e-5)
-                    continue;
-                for (int j = 0; j < objects.size(); j++)
-                {
-                    double t2 = objects[j]->intersect_shapes(spot_lightray, col);
-                    if (t2 > 0 && t2 + 1e-5 < dist)
-                    {
-                        isShadow = true;
-                        break;
-                    }
-                }
-
-                if (isShadow)
-                    continue;
-                point toSource = -spot_lightray.dir;
-                double scaling_factor = exp(-dist * dist * spot_lights[i].pointLight.falloff);
-                lambert = (toSource * normal.dir) * scaling_factor;
-
-                double dotProduct = spot_lightray.dir * normal.dir;
-                point reflection_dir = spot_lightray.dir - normal.dir * (2.0 * dotProduct);
-                reflection_dir.normalize();
-                Ray reflected_ray(intersection_point, reflection_dir);
-                phong = pow(-reflection_dir * ray.dir, shine) * scaling_factor;
-
-                col.x += kd * lambert * spot_lights[i].pointLight.color.x;
-                col.x += ks * phong * spot_lights[i].pointLight.color.x;
-                col.y += kd * lambert * spot_lights[i].pointLight.color.y;
-                col.y += ks * phong * spot_lights[i].pointLight.color.y;
-                col.z += kd * lambert * spot_lights[i].pointLight.color.z;
-                col.z += ks * phong * spot_lights[i].pointLight.color.z;
+                col.x += ks * phong * normal_lights[i].color.x;
+                col.y += ks * phong * normal_lights[i].color.y;
+                col.z += ks * phong * normal_lights[i].color.z;
             }
         }
 
+        // Problem in this section of code. Need to fix it
+        // for (int i = 0; i < spot_lights.size(); i++)
+        // {
+        //     point position = spot_lights[i].pointLight.pos;
+        //     point direction = intersection_point - position;
+        //     direction.normalize();
+
+        //     double dot = max(0.0, direction * spot_lights[i].dir);
+        //     double angle = acos(dot / (direction.length() * spot_lights[i].dir.length())) * (180.0 / M_PI);
+
+        //     if (fabs(angle) < spot_lights[i].cutoffAngle)
+        //     {
+        //         Ray spot_lightray(position, direction);
+        //         Ray normal = getNormal(intersection_point, spot_lightray);
+
+        //         bool isShadow = false;
+        //         double dist = (position - intersection_point).length();
+        //         if (dist < 1e-5)
+        //             continue;
+        //         for (int j = 0; j < objects.size(); j++)
+        //         {
+        //             double t2 = objects[j]->intersect_shapes(spot_lightray, col);
+        //             if (t2 > 0 && t2 + 1e-5 < dist)
+        //             {
+        //                 isShadow = true;
+        //                 break;
+        //             }
+        //         }
+
+        //         if (isShadow)
+        //             continue;
+        //         point toSource = -spot_lightray.dir;
+        //         double scaling_factor = exp(-dist * dist * spot_lights[i].pointLight.falloff);
+        //         lambert += (max(0.0, toSource * normal.dir)) * scaling_factor;
+
+        //         double dotProduct = max(0.0, ray.dir * normal.dir);
+        //         point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
+        //         reflection_dir.normalize();
+        //         Ray reflected_ray(intersection_point, reflection_dir);
+        //         phong += pow(max(0.0, reflection_dir * toSource), shine) * scaling_factor;
+        //         // cout << " l: " << lambert << " p: " << phong << endl;
+
+        //         col.x += kd * lambert * spot_lights[i].pointLight.color.x;
+        //         col.y += kd * lambert * spot_lights[i].pointLight.color.y;
+        //         col.z += kd * lambert * spot_lights[i].pointLight.color.z;
+        //         if (ks > 0)
+        //         {
+        //             col.x += ks * phong * spot_lights[i].pointLight.color.x;
+        //             col.y += ks * phong * spot_lights[i].pointLight.color.y;
+        //             col.z += ks * phong * spot_lights[i].pointLight.color.z;
+        //         }
+        //     }
+        // }
+
+        // I think this part is ok
         if (level < recursion_level)
         {
+            // cout << "level: " << level << endl;
             Ray normal = getNormal(intersection_point, ray);
-            double dotProduct = ray.dir * normal.dir;
+            double dotProduct = max(0.0, ray.dir * normal.dir);
             point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
             reflection_dir.normalize();
 
@@ -323,7 +336,7 @@ public:
     {
         this->shine = s;
     }
-    void setCoEfficients(double kd, double ks, double ka, double kr)
+    void setCoEfficients(double ka, double kd, double ks, double kr)
     {
         this->kd = kd;
         this->ks = ks;
@@ -507,14 +520,14 @@ struct triangle : public Object
 
 bool isPointInsideSquare(point pt, point a, point b, point c, point d)
 {
-    double minX = std::min(std::min(a.x, b.x), std::min(c.x, d.x));
-    double maxX = std::max(std::max(a.x, b.x), std::max(c.x, d.x));
+    double minX = std::min(std::min(a.x, b.x), std::min(c.x, d.x)) - 1e-5;
+    double maxX = std::max(std::max(a.x, b.x), std::max(c.x, d.x)) + 1e-5;
 
-    double minY = std::min(std::min(a.y, b.y), std::min(c.y, d.y));
-    double maxY = std::max(std::max(a.y, b.y), std::max(c.y, d.y));
+    double minY = std::min(std::min(a.y, b.y), std::min(c.y, d.y)) - 1e-5;
+    double maxY = std::max(std::max(a.y, b.y), std::max(c.y, d.y)) + 1e-5;
 
-    double minZ = std::min(std::min(a.z, b.z), std::min(c.z, d.z));
-    double maxZ = std::max(std::max(a.z, b.z), std::max(c.z, d.z));
+    double minZ = std::min(std::min(a.z, b.z), std::min(c.z, d.z)) - 1e-5;
+    double maxZ = std::max(std::max(a.z, b.z), std::max(c.z, d.z)) + 1e-5;
 
     return (pt.x >= minX && pt.x <= maxX &&
             pt.y >= minY && pt.y <= maxY &&

@@ -384,6 +384,7 @@ void readFile()
 
     getline(file, line);
     pixel_size = stoi(line);
+    getline(file, line);
 
     getline(file, line);
     checkerboard = stod(line);
@@ -400,9 +401,15 @@ void readFile()
     ka = coord[0];
     kd = coord[1];
     kr = coord[2];
+    Object *floor;
+    floor = new Floor(checkerboard);
+    objects.push_back(floor);
+    floor->setCoEfficients( ka, kd, -1, kr);
 
     getline(file, line);
+    getline(file, line);
     no_objects = stoi(line);
+    getline(file, line);
 
     float tokens[13];
 
@@ -515,7 +522,8 @@ void readFile()
                     j++;
                 }
             }
-            Object *t1, *t2, *t3, *t4, *s;
+            // , *s
+            Object *t1, *t2, *t3, *t4;
             point reference(tokens[0], tokens[1], tokens[2]);
             double width = tokens[3];
             double w = width / sqrt(2);
@@ -532,15 +540,15 @@ void readFile()
             t2 = new triangle(A + reference, B + reference, E + reference);
             t3 = new triangle(A + reference, C + reference, D + reference);
             t4 = new triangle(A + reference, D + reference, E + reference);
-            s = new square(B + reference, C + reference, D + reference, E + reference);
+            // s = new square(B + reference, C + reference, D + reference, E + reference);
 
             t1->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
             t2->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
             t3->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
             t4->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
-            s->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
+            // s->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
 
-            s->setColor(color);
+            // s->setColor(color);
             t1->setColor(color);
             t2->setColor(color);
             t3->setColor(color);
@@ -550,13 +558,13 @@ void readFile()
             t2->setShine(shine);
             t3->setShine(shine);
             t4->setShine(shine);
-            s->setShine(shine);
+            // s->setShine(shine);
 
             objects.push_back(t1);
             objects.push_back(t2);
             objects.push_back(t3);
             objects.push_back(t4);
-            objects.push_back(s);
+            // objects.push_back(s);
         }
         else
         {
@@ -580,8 +588,10 @@ void readFile()
                 Light nl(position, color, coord[6]);
                 normal_lights.push_back(nl);
             }
+            getline(file, line);
             break;
         }
+        getline(file, line);
     }
     getline(file, line);
     spot_light = stoi(line);
@@ -607,11 +617,10 @@ void readFile()
         spot_lights.push_back(sl);
     }
     file.close();
-    Object *floor;
-    floor = new Floor(checkerboard);
-    objects.push_back(floor);
 
     cout << "Total objects: " << objects.size() << endl;
+    cout << "Point lights: " << normal_lights.size() << endl;
+    cout << "Spot lights: " << spot_lights.size() << endl;
     // for(int i=0; i<objects.size(); i++){
     //     objects[i]->print();
     // }
