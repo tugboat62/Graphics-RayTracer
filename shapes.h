@@ -161,10 +161,15 @@ public:
         double t = intersect_shapes(ray, col);
         if (t < 0)
             return -1;
-        if (level == 0)
-            return t;
 
         point intersection_point = ray.origin + ray.dir * t;
+
+        if (level == 0)
+        {
+            col = getColorAt(intersection_point);
+            return t;
+        }
+
         point color_intersection = getColorAt(intersection_point);
 
         // cout << "color_intersection: " << color_intersection << endl;
@@ -175,7 +180,6 @@ public:
 
         double lambert = 0.0, phong = 0.0;
 
-        // Problem in this section of code. Need to fix it
         for (int i = 0; i < normal_lights.size(); i++)
         {
             point position = normal_lights[i].pos;
@@ -225,61 +229,66 @@ public:
         }
 
         // Problem in this section of code. Need to fix it
-        // for (int i = 0; i < spot_lights.size(); i++)
-        // {
-        //     point position = spot_lights[i].pointLight.pos;
-        //     point direction = intersection_point - position;
-        //     direction.normalize();
+        for (int i = 0; i < spot_lights.size(); i++)
+        {
+            point position = spot_lights[i].pointLight.pos;
+            point direction = intersection_point - position;
+            direction.normalize();
 
-        //     double dot = max(0.0, direction * spot_lights[i].dir);
-        //     double angle = acos(dot / (direction.length() * spot_lights[i].dir.length())) * (180.0 / M_PI);
+            double dot = max(0.0, fabs(direction * spot_lights[i].dir));
+            double angle = acos(dot / (direction.length() * spot_lights[i].dir.length())) * (180.0 / M_PI);
+            // cout << "angle: " << angle << endl;
 
-        //     if (fabs(angle) < spot_lights[i].cutoffAngle)
-        //     {
-        //         Ray spot_lightray(position, direction);
-        //         Ray normal = getNormal(intersection_point, spot_lightray);
+            if (fabs(angle) < spot_lights[i].cutoffAngle)
+            {
+                Ray spot_lightray(position, direction);
+                Ray normal = getNormal(intersection_point, spot_lightray);
 
-        //         bool isShadow = false;
-        //         double dist = (position - intersection_point).length();
-        //         if (dist < 1e-5)
-        //             continue;
-        //         for (int j = 0; j < objects.size(); j++)
-        //         {
-        //             double t2 = objects[j]->intersect_shapes(spot_lightray, col);
-        //             if (t2 > 0 && t2 + 1e-5 < dist)
-        //             {
-        //                 isShadow = true;
-        //                 break;
-        //             }
-        //         }
+                bool isShadow = false;
+                double dist = (intersection_point - position).length();
+                if (dist < 1e-5)
+                {
+                    // cout << " l: " << lambert << " p: " << phong << endl;
+                    continue;
+                }
+                for (int j = 0; j < objects.size(); j++)
+                {
+                    double t2 = objects[j]->intersect_shapes(spot_lightray, col);
+                    // cout << " l: " << lambert << " p: " << phong << endl;
+                    if (t2 > 0 && t2 + 1e-5 < dist)
+                    {
+                        isShadow = true;
+                        break;
+                    }
+                }
 
-        //         if (isShadow)
-        //             continue;
-        //         point toSource = -spot_lightray.dir;
-        //         double scaling_factor = exp(-dist * dist * spot_lights[i].pointLight.falloff);
-        //         lambert += (max(0.0, toSource * normal.dir)) * scaling_factor;
+                if (isShadow)
+                    continue;
+                point toSource = -spot_lightray.dir;
+                double scaling_factor = exp(-dist * dist * spot_lights[i].pointLight.falloff);
+                lambert += (max(0.0, toSource * normal.dir)) * scaling_factor;
 
-        //         double dotProduct = max(0.0, ray.dir * normal.dir);
-        //         point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
-        //         reflection_dir.normalize();
-        //         Ray reflected_ray(intersection_point, reflection_dir);
-        //         phong += pow(max(0.0, reflection_dir * toSource), shine) * scaling_factor;
-        //         // cout << " l: " << lambert << " p: " << phong << endl;
+                double dotProduct = max(0.0, ray.dir * normal.dir);
+                point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
+                reflection_dir.normalize();
+                Ray reflected_ray(intersection_point, reflection_dir);
+                phong += pow(max(0.0, reflection_dir * toSource), shine) * scaling_factor;
+                // cout << " l: " << lambert << " p: " << phong << endl;
 
-        //         col.x += kd * lambert * spot_lights[i].pointLight.color.x;
-        //         col.y += kd * lambert * spot_lights[i].pointLight.color.y;
-        //         col.z += kd * lambert * spot_lights[i].pointLight.color.z;
-        //         if (ks > 0)
-        //         {
-        //             col.x += ks * phong * spot_lights[i].pointLight.color.x;
-        //             col.y += ks * phong * spot_lights[i].pointLight.color.y;
-        //             col.z += ks * phong * spot_lights[i].pointLight.color.z;
-        //         }
-        //     }
-        // }
+                col.x += kd * lambert * spot_lights[i].pointLight.color.x;
+                col.y += kd * lambert * spot_lights[i].pointLight.color.y;
+                col.z += kd * lambert * spot_lights[i].pointLight.color.z;
+                if (ks > 0)
+                {
+                    col.x += ks * phong * spot_lights[i].pointLight.color.x;
+                    col.y += ks * phong * spot_lights[i].pointLight.color.y;
+                    col.z += ks * phong * spot_lights[i].pointLight.color.z;
+                }
+            }
+        }
 
         // I think this part is ok
-        if (level < recursion_level)
+        if (level <= recursion_level)
         {
             // cout << "level: " << level << endl;
             Ray normal = getNormal(intersection_point, ray);
@@ -434,7 +443,7 @@ struct Floor : public Object
         {
             return -1;
         }
-        col = getColorAt(p);
+        // col = getColorAt(p);
 
         return t;
     }
@@ -508,7 +517,7 @@ struct triangle : public Object
 
         if (beta + gamma < 1 && beta > 0 && gamma > 0 && t > 0)
         {
-            col = color;
+            // col = color;
             return t;
         }
         else
@@ -589,7 +598,7 @@ struct square : public Object
             point intersectionPoint = ray.origin + ray.dir * t;
             if (isPointInsideSquare(intersectionPoint, a, b, c, d))
             {
-                col = color;
+                // col = color;
                 return t;
             }
         }
@@ -622,7 +631,9 @@ struct sphere : public Object
 
     virtual Ray getNormal(point pt, Ray incidentRay)
     {
-        return Ray(pt, pt - reference_point);
+        point dir = pt - reference_point;
+        dir.normalize();
+        return Ray(pt, dir);
     }
 
     virtual double intersect_shapes(Ray ray, point &col)
@@ -638,7 +649,7 @@ struct sphere : public Object
         {
             double t1 = (-b + sqrt(d)) / (2 * a);
             double t2 = (-b - sqrt(d)) / (2 * a);
-            col = color;
+            // col = color;
             if (t1 < 0 && t2 < 0)
                 return -1;
             else if (t1 < 0)
