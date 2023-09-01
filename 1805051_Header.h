@@ -1,9 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <vector>
+#include <cmath>
 #include <GL/glut.h>
-
-using namespace std;
 
 using namespace std;
 

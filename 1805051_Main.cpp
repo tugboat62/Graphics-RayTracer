@@ -11,7 +11,7 @@
 #include <sstream>
 #include <vector>
 #include "bitmap_image.hpp"
-#include "shapes.h"
+#include "1805051_Header.h"
 
 using namespace std;
 
@@ -354,7 +354,7 @@ void specialKeyListener(int key, int x, int y)
 void readFile()
 {
     ifstream file;
-    file.open("input.txt");
+    file.open("description.txt");
     if (!file)
     {
         cout << "Unable to open file";
