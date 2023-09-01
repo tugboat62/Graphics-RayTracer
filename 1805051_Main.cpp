@@ -52,6 +52,7 @@ void initGL()
 float angle = 0.0;   // Rotation angle for animation
 bool rotate = false; // Rotate triangle?
 int drawgrid = 0;    // Toggle grids
+int texture = 0;     // Toggle texture
 
 void drawAxes()
 {
@@ -190,6 +191,7 @@ void capture()
 	image.save_image("Output_"+to_string(imageCount)+".bmp");
 	imageCount++;
 	cout<<"Saving Image"<<endl;
+    image.clear();
 }
 
 /* Handler for window re-size event. Called back when the window first appears and
@@ -299,6 +301,9 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
     case '0':
         capture();
+        break;
+    case 32:
+        texture = 1 - texture;
         break;
 
     // Control exit
