@@ -171,7 +171,7 @@ void capture()
 				// color = objects[nearestObjectIndex]->color;
 				color = point(0,0,0);
 				// cout<<"Before Color "<<color.x<<" "<<color.y<<" "<<color.z<<endl;
-				double t = objects[nearestObjectIndex]->intersect(ray,color, 1);
+				double t = objects[nearestObjectIndex]->intersect(ray,color, recursion_level);
 
 				if(color.x > 1) color.x = 1;
 				if(color.y > 1) color.y = 1;
@@ -583,9 +583,9 @@ void readFile()
                         j++;
                     }
                 }
-                point position(coord[0], coord[1], coord[2]);
-                point color(coord[3], coord[4], coord[5]);
-                Light nl(position, color, coord[6]);
+                point position(tokens[0], tokens[1], tokens[2]);
+                point color(tokens[3], tokens[4], tokens[5]);
+                Light nl(position, color, tokens[6]);
                 normal_lights.push_back(nl);
             }
             getline(file, line);
@@ -601,28 +601,40 @@ void readFile()
         for (int k = 0; k < 4; k++)
         {
             getline(file, line);
+            // cout << line << endl;
             istringstream iss7(line);
             while (iss7 >> token)
             {
                 float number = stod(token);
+                // cout << number << endl;
                 tokens[j] = number;
                 j++;
             }
         }
         point position(tokens[0], tokens[1], tokens[2]);
-        point color(coord[3], coord[4], coord[5]);
-        Light nl(position, color, coord[6]);
-        point direction(tokens[7], tokens[8], tokens[9]);
+        point color(tokens[3], tokens[4], tokens[5]);
+        Light nl(position, color, tokens[6]);
+        point direction(tokens[7]-tokens[0], tokens[8]-tokens[1], tokens[9]-tokens[2]);
+        direction.normalize();
         struct SpotLight sl(nl, direction, tokens[10]);
         spot_lights.push_back(sl);
     }
     file.close();
 
-    cout << "Total objects: " << objects.size() << endl;
-    cout << "Point lights: " << normal_lights.size() << endl;
-    cout << "Spot lights: " << spot_lights.size() << endl;
+    // cout << "Total objects: " << objects.size() << endl;
+    // cout << "Point lights: " << normal_lights.size() << endl;
+    // cout << "Spot lights: " << spot_lights.size() << endl;
     // for(int i=0; i<objects.size(); i++){
     //     objects[i]->print();
+    // }
+    // for (int i = 0; i < spot_lights.size(); i++)
+    // {
+    //     spot_lights[i].print();
+    // }
+
+    // for (int i = 0; i < normal_lights.size(); i++)
+    // {
+    //     normal_lights[i].print();
     // }
 }
 

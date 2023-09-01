@@ -96,6 +96,14 @@ struct Light
         glVertex3f(pos.x, pos.y, pos.z);
         glEnd();
     }
+
+    void print()
+    {
+        cout << "Point Light: " << endl;
+        cout << "Position: " << pos << endl;
+        cout << "Color: " << color << endl;
+        cout << "Falloff: " << falloff << endl;
+    }
 };
 
 // spotlight
@@ -113,10 +121,20 @@ struct SpotLight
         point pos = pointLight.pos;
 
         glPointSize(15);
-        glBegin(GL_POINTS);
         glColor3f(color.x, color.y, color.z);
+        glBegin(GL_POINTS);
         glVertex3f(pos.x, pos.y, pos.z);
         glEnd();
+    }
+
+    void print()
+    {
+        cout << "Spot Light: " << endl;
+        cout << "Position: " << pointLight.pos << endl;
+        cout << "Color: " << pointLight.color << endl;
+        cout << "Falloff: " << pointLight.falloff << endl;
+        cout << "Direction: " << dir << endl;
+        cout << "Cutoff Angle: " << cutoffAngle << endl;
     }
 };
 
@@ -292,20 +310,19 @@ public:
         {
             // cout << "level: " << level << endl;
             Ray normal = getNormal(intersection_point, ray);
-            double dotProduct = max(0.0, ray.dir * normal.dir);
+            double dotProduct = ray.dir * normal.dir;
             point reflection_dir = ray.dir - normal.dir * (2.0 * dotProduct);
             reflection_dir.normalize();
 
             Ray reflected_ray(intersection_point, reflection_dir);
             reflected_ray.origin = reflected_ray.origin + reflected_ray.dir * 1e-5;
 
-            point reflected_color;
             double t = -1;
             int nearest = -1;
 
             for (int i = 0; i < objects.size(); i++)
             {
-                double t2 = objects[i]->intersect(reflected_ray, reflected_color, level + 1);
+                double t2 = objects[i]->intersect_shapes(reflected_ray, col);
                 if (t2 > 0 && (t == -1 || t2 < t))
                 {
                     t = t2;
@@ -315,6 +332,7 @@ public:
 
             if (nearest != -1)
             {
+                point reflected_color;
                 double t = objects[nearest]->intersect(reflected_ray, reflected_color, level + 1);
                 col.x += kr * reflected_color.x;
                 col.y += kr * reflected_color.y;
