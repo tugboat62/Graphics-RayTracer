@@ -184,7 +184,7 @@ public:
 
         if (level == 0)
         {
-            col = getColorAt(intersection_point);
+            // col = getColorAt(intersection_point);
             return t;
         }
 
@@ -322,7 +322,7 @@ public:
 
             for (int i = 0; i < objects.size(); i++)
             {
-                double t2 = objects[i]->intersect_shapes(reflected_ray, col);
+                double t2 = objects[i]->intersect(reflected_ray, col, 0);
                 if (t2 > 0 && (t == -1 || t2 < t))
                 {
                     t = t2;
