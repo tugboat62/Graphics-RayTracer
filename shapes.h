@@ -235,7 +235,7 @@ public:
             point direction = intersection_point - position;
             direction.normalize();
 
-            double dot = max(0.0, fabs(direction * spot_lights[i].dir));
+            double dot = direction * spot_lights[i].dir;
             double angle = acos(dot / (direction.length() * spot_lights[i].dir.length())) * (180.0 / M_PI);
             // cout << "angle: " << angle << endl;
 

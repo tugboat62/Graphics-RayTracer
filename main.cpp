@@ -99,15 +99,15 @@ void display()
         objects[i]->draw();
     }
 
-    // for (int i = 0; i < normal_lights.size(); i++)
-    // {
-    //     normal_lights[i].draw();
-    // }
+    for (int i = 0; i < normal_lights.size(); i++)
+    {
+        normal_lights[i].draw();
+    }
 
-    // for (int i = 0; i < spot_lights.size(); i++)
-    // {
-    //     spot_lights[i].draw();
-    // }
+    for (int i = 0; i < spot_lights.size(); i++)
+    {
+        spot_lights[i].draw();
+    }
 
     // drawAxes();
 
