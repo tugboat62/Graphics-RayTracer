@@ -151,6 +151,9 @@ extern vector<Light> normal_lights;
 extern vector<SpotLight> spot_lights;
 extern vector<Object *> objects;
 extern int recursion_level;
+extern int texture;
+extern bitmap_image texture_b;
+extern bitmap_image texture_w;
 
 class Object
 {
@@ -197,7 +200,6 @@ public:
         col.z = color_intersection.z * ka;
 
         double lambert = 0.0, phong = 0.0;
-
         for (int i = 0; i < normal_lights.size(); i++)
         {
             point position = normal_lights[i].pos;
@@ -235,9 +237,9 @@ public:
             phong += pow(max(0.0, reflection_dir * toSource), shine) * scaling_factor;
             // cout << "lambert: " << lambert << endl;
 
-            col.x += kd * lambert * normal_lights[i].color.x;
-            col.y += kd * lambert * normal_lights[i].color.y;
-            col.z += kd * lambert * normal_lights[i].color.z;
+            col.x += kd * lambert * color_intersection.x;
+            col.y += kd * lambert * color_intersection.y;
+            col.z += kd * lambert * color_intersection.z;
             if (ks > 0)
             {
                 col.x += ks * phong * normal_lights[i].color.x;
@@ -293,9 +295,9 @@ public:
                 phong += pow(max(0.0, reflection_dir * toSource), shine) * scaling_factor;
                 // cout << " l: " << lambert << " p: " << phong << endl;
 
-                col.x += kd * lambert * spot_lights[i].pointLight.color.x;
-                col.y += kd * lambert * spot_lights[i].pointLight.color.y;
-                col.z += kd * lambert * spot_lights[i].pointLight.color.z;
+                col.x += kd * lambert * color_intersection.x;
+                col.y += kd * lambert * color_intersection.y;
+                col.z += kd * lambert * color_intersection.z;
                 if (ks > 0)
                 {
                     col.x += ks * phong * spot_lights[i].pointLight.color.x;
@@ -387,8 +389,9 @@ struct Floor : public Object
     Floor(double tilewidth)
     {
         tiles = 50;
-        reference_point = point(-(tiles * tilewidth) / 2, -(tiles * tilewidth) / 2, 0);
+        reference_point = point(-(tiles * tilewidth) / 2.0, -(tiles * tilewidth) / 2.0, 0);
         length = tilewidth;
+        shine = 30;
     }
 
     virtual point getColorAt(point pt)
@@ -404,10 +407,36 @@ struct Floor : public Object
 
         if (((tileX + tileY) % 2) == 0)
         {
+            if (texture)
+            {
+                int x = tileX * length;
+                int y = tileY * length;
+                unsigned char red, green, blue;
+                double dx = (pt.x - reference_point.x) - x;
+                double dy = (pt.y - reference_point.y) - y;
+                int px = abs((dx / length) * texture_w.height());
+                int py = abs((dy / length) * texture_w.width());
+                // cout << px << " " << py << endl;
+                texture_w.get_pixel(py, px, red, green, blue);
+                return point(red / 255.0, green / 255.0, blue / 255.0);
+            }
             return point(1, 1, 1);
         }
         else
         {
+            if (texture)
+            {
+                int x = tileX * length;
+                int y = tileY * length;
+                unsigned char red, green, blue;
+                double dx = (pt.x - reference_point.x) - x;
+                double dy = (pt.y - reference_point.y) - y;
+                int px = abs((dx / length) * texture_b.height());
+                int py = abs((dy / length) * texture_b.width());
+                // cout << px << " " << py << endl;
+                texture_b.get_pixel(py, px, red, green, blue);
+                return point(red / 255.0, green / 255.0, blue / 255.0);
+            }
             return point(0, 0, 0);
         }
     }
@@ -424,9 +453,9 @@ struct Floor : public Object
     virtual void draw()
     {
         glBegin(GL_QUADS);
-        for (int i = -tiles; i < tiles; i++)
+        for (int i = 0; i < tiles; i++)
         {
-            for (int j = -tiles; j < tiles; j++)
+            for (int j = 0; j < tiles; j++)
             {
                 if ((i + j) % 2 == 0)
                 {
@@ -436,10 +465,10 @@ struct Floor : public Object
                 {
                     glColor3f(0, 0, 0);
                 }
-                glVertex3f(i * length, j * length, 0.0f);
-                glVertex3f((i + 1) * length, j * length, 0.0f);
-                glVertex3f((i + 1) * length, (j + 1) * length, 0.0f);
-                glVertex3f(i * length, (j + 1) * length, 0.0f);
+                glVertex3f(reference_point.x + i * length, reference_point.y + j * length, 0);
+                glVertex3f(reference_point.x + (i + 1) * length, reference_point.y + j * length, 0);
+                glVertex3f(reference_point.x + (i + 1) * length, reference_point.y + (j + 1) * length, 0);
+                glVertex3f(reference_point.x + i * length, reference_point.y + (j + 1) * length, 0);
             }
         }
         glEnd();
@@ -487,7 +516,7 @@ struct triangle : public Object
         point normal = (b - a) ^ (c - a);
         normal.normalize();
 
-        if (incidentRay.dir * normal < 0)
+        if (incidentRay.dir * normal > 0)
         {
             return Ray(pt, -normal);
         }

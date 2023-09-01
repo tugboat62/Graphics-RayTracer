@@ -39,6 +39,9 @@ int recursion_level;
 float gridCenterX = 0.0f;
 float gridCenterY = 0.0f;
 
+bitmap_image texture_w("texture_w.bmp");
+bitmap_image texture_b("texture_b.bmp");
+
 /* Initialize OpenGL Graphics */
 void initGL()
 {
@@ -188,7 +191,7 @@ void capture()
 		}
 	}
 
-	image.save_image("Output_"+to_string(imageCount)+".bmp");
+	image.save_image("Output.bmp");
 	imageCount++;
 	cout<<"Saving Image"<<endl;
     image.clear();
@@ -316,39 +319,40 @@ void keyboardListener(unsigned char key, int x, int y)
 
 /* Callback handler for special-key event */
 void specialKeyListener(int key, int x, int y)
-{
+{   
+    double rate = 5;
     switch (key)
     {
     // Translation
     case GLUT_KEY_LEFT:
-        pos.x -= r.x;
-        pos.y -= r.y;
-        pos.z -= r.z;
+        pos.x -= r.x*rate;
+        pos.y -= r.y*rate;
+        pos.z -= r.z*rate;
         break;
     case GLUT_KEY_RIGHT:
-        pos.x += r.x;
-        pos.y += r.y;
-        pos.z += r.z;
+        pos.x += r.x*rate;
+        pos.y += r.y*rate;
+        pos.z += r.z*rate;
         break;
     case GLUT_KEY_UP:
-        pos.x += l.x;
-        pos.y += l.y;
-        pos.z += l.z;
+        pos.x += l.x*rate;
+        pos.y += l.y*rate;
+        pos.z += l.z*rate;
         break;
     case GLUT_KEY_DOWN:
-        pos.x -= l.x;
-        pos.y -= l.y;
-        pos.z -= l.z;
+        pos.x -= l.x*rate;
+        pos.y -= l.y*rate;
+        pos.z -= l.z*rate;
         break;
     case GLUT_KEY_PAGE_UP:
-        pos.x += u.x;
-        pos.y += u.y;
-        pos.z += u.z;
+        pos.x += u.x*rate;
+        pos.y += u.y*rate;
+        pos.z += u.z*rate;
         break;
     case GLUT_KEY_PAGE_DOWN:
-        pos.x -= u.x;
-        pos.y -= u.y;
-        pos.z -= u.z;
+        pos.x -= u.x*rate;
+        pos.y -= u.y*rate;
+        pos.z -= u.z*rate;
         break;
     default:
         return;
@@ -393,6 +397,8 @@ void readFile()
 
     getline(file, line);
     checkerboard = stod(line);
+    // texture_b.setwidth_height(checkerboard, checkerboard);
+    // texture_w.setwidth_height(checkerboard, checkerboard);
 
     getline(file, line);
     istringstream iss2(line);
@@ -406,10 +412,11 @@ void readFile()
     ka = coord[0];
     kd = coord[1];
     kr = coord[2];
+    cout << ka << " " << kd << " " << kr << endl;
     Object *floor;
     floor = new Floor(checkerboard);
     objects.push_back(floor);
-    floor->setCoEfficients( ka, kd, -1, kr);
+    floor->setCoEfficients( ka, kd, 0, kr);
 
     getline(file, line);
     getline(file, line);
@@ -540,10 +547,10 @@ void readFile()
             point E(width/2.0, width/2.0, height);
             int shine = (int)tokens[12];
 
-            t1 = new triangle(A + reference, C + reference, B + reference);
-            t2 = new triangle(A + reference, B + reference, E + reference);
-            t3 = new triangle(A + reference, C + reference, D + reference);
-            t4 = new triangle(A + reference, D + reference, E + reference);
+            t1 = new triangle(A + reference, B + reference, E + reference);
+            t2 = new triangle(B + reference, C + reference, E + reference);
+            t3 = new triangle(C + reference, D + reference, E + reference);
+            t4 = new triangle(D + reference, A + reference, E + reference);
             s = new square(B + reference, C + reference, D + reference, E + reference);
 
             t1->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
@@ -674,5 +681,7 @@ int main(int argc, char **argv)
     glutSpecialFunc(specialKeyListener);                      // Register callback handler for special-key event
     initGL();                                                 // Our own OpenGL initialization
     glutMainLoop();                                           // Enter the event-processing loop
+    texture_b.clear();
+    texture_w.clear();
     return 0;
 }
