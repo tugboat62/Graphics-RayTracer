@@ -523,32 +523,31 @@ void readFile()
                 }
             }
             // , *s
-            Object *t1, *t2, *t3, *t4;
+            Object *t1, *t2, *t3, *t4, *s;
             point reference(tokens[0], tokens[1], tokens[2]);
             double width = tokens[3];
-            double w = width / sqrt(2);
             double height = tokens[4];
             point color(tokens[5], tokens[6], tokens[7]);
-            point A(0, 0, height);
-            point B(w, 0, 0);
-            point C(0, w, 0);
-            point D(-w, 0, 0);
-            point E(0, -w, 0);
+            point A(0, 0, 0);
+            point B(width, 0, 0);
+            point C(width, width, 0);
+            point D(0, width, 0);
+            point E(width/2.0, width/2.0, height);
             int shine = (int)tokens[12];
 
             t1 = new triangle(A + reference, C + reference, B + reference);
             t2 = new triangle(A + reference, B + reference, E + reference);
             t3 = new triangle(A + reference, C + reference, D + reference);
             t4 = new triangle(A + reference, D + reference, E + reference);
-            // s = new square(B + reference, C + reference, D + reference, E + reference);
+            s = new square(B + reference, C + reference, D + reference, E + reference);
 
             t1->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
             t2->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
             t3->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
             t4->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
-            // s->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
+            s->setCoEfficients(tokens[8], tokens[9], tokens[10], tokens[11]);
 
-            // s->setColor(color);
+            s->setColor(color);
             t1->setColor(color);
             t2->setColor(color);
             t3->setColor(color);
@@ -558,13 +557,13 @@ void readFile()
             t2->setShine(shine);
             t3->setShine(shine);
             t4->setShine(shine);
-            // s->setShine(shine);
+            s->setShine(shine);
 
             objects.push_back(t1);
             objects.push_back(t2);
             objects.push_back(t3);
             objects.push_back(t4);
-            // objects.push_back(s);
+            objects.push_back(s);
         }
         else
         {
